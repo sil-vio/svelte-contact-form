@@ -1,32 +1,55 @@
 <script>
-	let subject, from, body;
+	import { fade } from 'svelte/transition';
+  import { createForm } from "svelte-forms-lib";
+  import * as yup from "yup";
 
-	function resetForm() {
-		subject = "";
-		from = "";
-		body = "";
-	}
+	const URL_FN = "https://wizardly-lamport-de3dff.netlify.com/.netlify/functions/save-message";
+	let messageSended = false;
+	let sendError = false;
 
-	async function sendMail() {
-		
-		const payload = 
-			 {
-					from: from,
-					subject: subject,
-					body: body
-				};
-	
-		console.log("invio mail: ", payload);
-		let response = await fetch("https://europe-west1-fir-test-fb934.cloudfunctions.net/message", {
+	const { form, 
+					errors, 
+					state, 
+					isValid,
+					isSubmitting,
+					handleChange, 
+					handleSubmit, 
+					handleReset 
+				} 
+				= 	createForm({
+							initialValues: {
+								from: "",
+								subject: "",
+								body: "",
+							},
+							validationSchema: yup.object().shape({
+								from: yup
+									.string()
+									.email()
+									.required(),
+								subject: yup.string().required(),
+								body: yup.string().required()
+							}),
+							onSubmit: values => sendMessage(values)
+						});
+
+	async function sendMessage(payload) {	
+		sendError = false;
+		console.log("send message: ", payload);
+		try {
+		let response = await fetch(URL_FN, {
   			method: "POST",
 				headers: {
 						'Accept': 'application/json, text/plain, */*',
 						'Content-Type': 'application/json'
 				},
-  			body: JSON.stringify(payload)
+				body: JSON.stringify(payload)
 		});
-
-		console.log("invio mail response : " + response);
+		messageSended = true;
+		console.log("message sent : " + response);
+		} catch(err) {
+			sendError = true;
+		}
 	}
 </script>
 
@@ -47,30 +70,85 @@
         </div>
       </div>
       <div class="screen-body">
-        <div class="screen-body-item left">
+				<div class="screen-body-item left">
+						{#if sendError}
+							<div class="app-title" transition:fade>
+							<span>Oops! Something went wrong</span>
+							<span>Please try again later</span>
+							</div><br/>
+						{/if}
+						{#if !messageSended}
+            <form on:submit={handleSubmit}>
+							<div class="app-form-group">
+								<input class="app-form-control" 
+									id="from"
+									name="from"
+                  placeholder="Email" 
+									on:change={handleChange}
+									bind:value={$form.from}>
+									{#if $errors.from}
+										<small>{$errors.from}</small>
+									{/if}
+							</div>
+	            <div class="app-form-group">
+								<input class="app-form-control" 
+								id="subject"
+								name="subject"
+								placeholder="Subject" 
+								on:change={handleChange}
+								on:blur={handleChange}
+								bind:value={$form.subject}
+								/>
+								{#if $errors.subject}
+									<small>{$errors.subject}</small>
+								{/if}
+							</div>
+							<div class="app-form-group">
+								<textarea class="app-form-control"
+									id="body"
+									name="body"
+									placeholder="Message"
+									on:change={handleChange}
+									on:blur={handleChange}
+									bind:value={$form.body}
+								></textarea>
+								{#if $errors.body}
+									<small>{$errors.body}</small>
+								{/if}
+							</div>
+
+							<div class="app-form-group buttons">
+              <button class="app-form-button" on:click={handleReset}>Reset</button>
+              <button type="submit" class="app-form-button">
+							{#if $isSubmitting}Sending...{:else}Send{/if} 
+							</button>
+            </div>
+						</form>			
+						{:else}
+							<div class="app-title" transition:fade>
+            		<span>Your message was successfully sent!</span>
+								<br/>
+								<br/>
+								<br/> 
+								<br/> 
+								<br/> 
+								<br/>
+								<br/>
+								<br/> 
+           		</div>
+						{/if}
+        </div>
+				
+        <div class="screen-body-item right">
+					{#if !messageSended}
           <div class="app-title">
-            <span>CONTACT</span>
-            <span>ME</span>
-          </div>
+						<span>Contact</span>
+            <span>me</span>
+					</div>
+					{/if}
           <div class="app-contact"></div>
         </div>
-        <div class="screen-body-item">
-          <div class="app-form">
-						<div class="app-form-group">
-              <input class="app-form-control" placeholder="Email" bind:value={from}>
-            </div>
-            <div class="app-form-group">
-              <input class="app-form-control" placeholder="Subject" bind:value={subject}>
-            </div>
-            <div class="app-form-group message">
-              <textarea  class="app-form-control" placeholder="Message" bind:value={body}></textarea>
-            </div>
-            <div class="app-form-group buttons">
-              <button class="app-form-button" on:click={resetForm}>Reset</button>
-              <button class="app-form-button" on:click={sendMail}>Send</button>
-            </div>
-          </div>
-        </div>
+        
       </div>
     </div>
   </div>
@@ -178,12 +256,20 @@ body, button, input, textarea {
 
 .screen-body-item {
   flex: 1;
-  padding: 50px;
+  padding: 30px;
 }
 
 .screen-body-item.left {
   display: flex;
   flex-direction: column;
+	min-width: 400;
+}
+
+
+.screen-body-item.right {
+  display: flex;
+  flex-direction: column;
+	max-width: 200px;
 }
 
 .app-title {
@@ -248,6 +334,7 @@ textarea {
     background-color: #2d2d2d;
     color: white;
     border-radius: 4px;
+		min-height: 150px
 }
 
 .app-form-control:focus {
