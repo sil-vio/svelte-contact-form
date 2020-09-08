@@ -3,7 +3,7 @@
   import { createForm } from "svelte-forms-lib";
   import * as yup from "yup";
 
-	const URL_FN = "https://wizardly-lamport-de3dff.netlify.com/.netlify/functions/save-message";
+	export let formurl = "https://wizardly-lamport-de3dff.netlify.app/.netlify/functions/save-message";
 	let messageSended = false;
 	let sendError = false;
 
@@ -37,7 +37,7 @@
 		sendError = false;
 		console.log("send message: ", payload);
 		try {
-		let response = await fetch(URL_FN, {
+		let response = await fetch(formurl, {
   			method: "POST",
 				headers: {
 						'Accept': 'application/json, text/plain, */*',
